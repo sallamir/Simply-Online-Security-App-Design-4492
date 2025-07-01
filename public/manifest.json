@@ -1,0 +1,22 @@
+{
+  "name": "Simply Online Australia",
+  "short_name": "Simply Online",
+  "description": "Security Camera Support & Education Hub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f97316",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751365731047-Logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751365731047-Logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
