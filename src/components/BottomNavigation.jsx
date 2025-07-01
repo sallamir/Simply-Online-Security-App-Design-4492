@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiHome, FiPlay, FiHelpCircle, FiShoppingBag, FiHeadphones, FiStar } = FiIcons;
+const { FiHome, FiPlay, FiHelpCircle, FiShoppingBag, FiHeadphones, FiStar, FiPackage } = FiIcons;
 
 const BottomNavigation = () => {
   const location = useLocation();
@@ -13,7 +13,7 @@ const BottomNavigation = () => {
     { path: '/', icon: FiHome, label: 'Home' },
     { path: '/products', icon: FiShoppingBag, label: 'Products' },
     { path: '/tutorials', icon: FiPlay, label: 'Tutorials' },
-    { path: '/testimonials', icon: FiStar, label: 'Reviews' },
+    { path: '/orders', icon: FiPackage, label: 'Orders' },
     { path: '/support', icon: FiHeadphones, label: 'Support' },
   ];
 
@@ -28,7 +28,7 @@ const BottomNavigation = () => {
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || 
             (item.path !== '/' && location.pathname.startsWith(item.path));
-          
+
           return (
             <Link
               key={item.path}
@@ -37,8 +37,8 @@ const BottomNavigation = () => {
             >
               <motion.div
                 className={`p-2 rounded-xl transition-all duration-200 ${
-                  isActive 
-                    ? 'text-primary-600 bg-primary-50 shadow-soft' 
+                  isActive
+                    ? 'text-primary-600 bg-primary-50 shadow-soft'
                     : 'text-secondary-500 hover:text-secondary-700 hover:bg-secondary-50'
                 }`}
                 whileTap={{ scale: 0.95 }}
@@ -47,9 +47,11 @@ const BottomNavigation = () => {
               >
                 <SafeIcon icon={item.icon} className="w-5 h-5" />
               </motion.div>
-              <span className={`text-xs mt-1 truncate font-medium ${
-                isActive ? 'text-primary-600' : 'text-secondary-500'
-              }`}>
+              <span
+                className={`text-xs mt-1 truncate font-medium ${
+                  isActive ? 'text-primary-600' : 'text-secondary-500'
+                }`}
+              >
                 {item.label}
               </span>
             </Link>

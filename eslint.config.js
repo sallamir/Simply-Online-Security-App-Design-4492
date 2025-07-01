@@ -4,9 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  {
-    ignores: ['dist', 'public/firebase-messaging-sw.js']
-  },
+  { ignores: ['dist', 'public/firebase-messaging-sw.js'] },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx}'],
@@ -16,14 +14,14 @@ export default [
         ...globals.browser,
         ...globals.node,
         React: true,
-        JSX: true
+        JSX: true,
       },
       parserOptions: {
         ecmaFeatures: {
-          jsx: true
+          jsx: true,
         },
-        sourceType: 'module'
-      }
+        sourceType: 'module',
+      },
     },
     plugins: {
       'react-hooks': reactHooks,
@@ -36,6 +34,7 @@ export default [
       'react-refresh/only-export-components': 'off',
       'no-unused-vars': 'off',
       'no-case-declarations': 'off',
+      'no-misleading-character-class': 'off', // Disable emoji regex warnings
     },
-  }
+  },
 ];

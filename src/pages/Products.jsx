@@ -26,11 +26,11 @@ const Products = () => {
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = allProducts.filter(product => {
       const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                           product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.sku.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesCategory = selectedCategory === 'all' || 
-        (product.category && product.category.includes(selectedCategory));
+                             (product.category && product.category.includes(selectedCategory));
       
       return matchesSearch && matchesCategory;
     });
@@ -69,6 +69,27 @@ const Products = () => {
     return `$${price?.toFixed(0)}`;
   };
 
+  // Helper function to get correct pricing display
+  const getPricing = (product) => {
+    if (product.originalPrice && product.originalPrice > product.price) {
+      // Product is on sale - show current price as main, original as crossed out
+      return {
+        currentPrice: product.price,
+        originalPrice: product.originalPrice,
+        isOnSale: true,
+        savings: product.originalPrice - product.price
+      };
+    } else {
+      // No sale - just show the price
+      return {
+        currentPrice: product.price,
+        originalPrice: null,
+        isOnSale: false,
+        savings: 0
+      };
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -92,6 +113,7 @@ const Products = () => {
             <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">Expert Support</span>
           </div>
         </div>
+        
         {/* Background Pattern */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white bg-opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white bg-opacity-5 rounded-full translate-y-12 -translate-x-12"></div>
@@ -104,10 +126,7 @@ const Products = () => {
         transition={{ delay: 0.2 }}
         className="relative"
       >
-        <SafeIcon
-          icon={FiSearch}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-secondary-400"
-        />
+        <SafeIcon icon={FiSearch} className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-secondary-400" />
         <input
           type="text"
           placeholder="Search for security cameras, accessories..."
@@ -177,144 +196,148 @@ const Products = () => {
         transition={{ delay: 0.5 }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {filteredAndSortedProducts.map((product, index) => (
-          <motion.div
-            key={product.id}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.05 * index }}
-            whileHover={{ y: -8 }}
-            className="group cursor-pointer"
-            onClick={() => openProductWebsite(product.url)}
-          >
-            <div className="bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-strong transition-all duration-300 border border-secondary-100">
-              {/* Product Image */}
-              <div className="relative overflow-hidden bg-secondary-50">
-                <img
-                  src={product.image}
-                  alt={product.title}
-                  className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
-                  onError={(e) => {
-                    e.target.src = `https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop&text=${encodeURIComponent(product.title)}`;
-                  }}
-                />
+        {filteredAndSortedProducts.map((product, index) => {
+          const pricing = getPricing(product);
+          
+          return (
+            <motion.div
+              key={product.id}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.05 * index }}
+              whileHover={{ y: -8 }}
+              className="group cursor-pointer"
+              onClick={() => openProductWebsite(product.url)}
+            >
+              <div className="bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-strong transition-all duration-300 border border-secondary-100">
+                {/* Product Image */}
+                <div className="relative overflow-hidden bg-secondary-50">
+                  <img
+                    src={product.image}
+                    alt={product.title}
+                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.src = `https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop&text=${encodeURIComponent(product.title)}`;
+                    }}
+                  />
 
-                {/* Floating Badges */}
-                <div className="absolute top-4 left-4 space-y-2">
-                  {product.bestseller && (
-                    <div className="bg-primary-600 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-medium flex items-center space-x-1">
-                      <SafeIcon icon={FiStar} className="w-3 h-3" />
-                      <span>Best Seller</span>
-                    </div>
-                  )}
-                  {product.originalPrice && (
-                    <div className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-medium">
-                      Save ${(product.originalPrice - product.price).toFixed(0)}
-                    </div>
-                  )}
+                  {/* Floating Badges */}
+                  <div className="absolute top-4 left-4 space-y-2">
+                    {product.bestseller && (
+                      <div className="bg-primary-600 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-medium flex items-center space-x-1">
+                        <SafeIcon icon={FiStar} className="w-3 h-3" />
+                        <span>Best Seller</span>
+                      </div>
+                    )}
+                    {pricing.isOnSale && (
+                      <div className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-medium">
+                        Save ${pricing.savings.toFixed(0)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Wishlist Button */}
+                  <button className="absolute top-4 right-4 w-10 h-10 bg-white bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white shadow-medium">
+                    <SafeIcon icon={FiHeart} className="w-5 h-5 text-secondary-600" />
+                  </button>
+
+                  {/* Quick View Overlay */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+                    <button className="bg-white text-primary-600 px-6 py-3 rounded-full font-medium opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-strong hover:bg-primary-600 hover:text-white">
+                      Quick View
+                    </button>
+                  </div>
                 </div>
 
-                {/* Wishlist Button */}
-                <button className="absolute top-4 right-4 w-10 h-10 bg-white bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white shadow-medium">
-                  <SafeIcon icon={FiHeart} className="w-5 h-5 text-secondary-600" />
-                </button>
+                {/* Product Info */}
+                <div className="p-6">
+                  {/* Price - CORRECTED: Show current price large, original crossed out */}
+                  <div className="flex items-center space-x-2 mb-3">
+                    <span className="text-2xl font-bold text-secondary-900">
+                      {formatPrice(pricing.currentPrice)}
+                    </span>
+                    {pricing.isOnSale && pricing.originalPrice && (
+                      <span className="text-lg text-secondary-500 line-through">
+                        {formatPrice(pricing.originalPrice)}
+                      </span>
+                    )}
+                  </div>
 
-                {/* Quick View Overlay */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-                  <button className="bg-white text-primary-600 px-6 py-3 rounded-full font-medium opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-strong hover:bg-primary-600 hover:text-white">
-                    Quick View
+                  {/* Title */}
+                  <h3 className="font-bold text-secondary-900 text-lg mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">
+                    {product.title}
+                  </h3>
+
+                  {/* Rating & Sales Rank */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-1">
+                      {[...Array(5)].map((_, i) => (
+                        <SafeIcon
+                          key={i}
+                          icon={FiStar}
+                          className={`w-4 h-4 ${
+                            i < Math.floor(product.rating)
+                              ? 'text-yellow-400 fill-current'
+                              : 'text-secondary-300'
+                          }`}
+                        />
+                      ))}
+                      <span className="text-sm text-secondary-600 ml-1">
+                        ({product.reviews})
+                      </span>
+                    </div>
+                    {product.bestseller && (
+                      <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full font-medium">
+                        #{product.salesRank}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Key Features */}
+                  <div className="mb-4">
+                    <div className="space-y-1">
+                      {product.features.slice(0, 2).map((feature, idx) => (
+                        <div key={idx} className="flex items-center space-x-2">
+                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                          <span className="text-sm text-secondary-600">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Category Tags */}
+                  {product.category && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {product.category.slice(0, 2).map((cat, catIndex) => {
+                        const categoryInfo = categoriesWithCounts.find(c => c.id === cat);
+                        return (
+                          <span
+                            key={catIndex}
+                            className="text-xs bg-secondary-100 text-secondary-700 px-2 py-1 rounded-lg font-medium"
+                          >
+                            {categoryInfo?.name || cat}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openProductWebsite(product.url);
+                    }}
+                    className="w-full bg-primary-600 text-white py-3 rounded-xl font-medium hover:bg-primary-700 transition-all duration-200 shadow-soft hover:shadow-medium flex items-center justify-center space-x-2"
+                  >
+                    <span>View Details</span>
+                    <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-
-              {/* Product Info */}
-              <div className="p-6">
-                {/* Price */}
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-2xl font-bold text-secondary-900">
-                    {formatPrice(product.price)}
-                  </span>
-                  {product.originalPrice && (
-                    <span className="text-lg text-secondary-500 line-through">
-                      {formatPrice(product.originalPrice)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Title */}
-                <h3 className="font-bold text-secondary-900 text-lg mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">
-                  {product.title}
-                </h3>
-
-                {/* Rating & Sales Rank */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-1">
-                    {[...Array(5)].map((_, i) => (
-                      <SafeIcon
-                        key={i}
-                        icon={FiStar}
-                        className={`w-4 h-4 ${
-                          i < Math.floor(product.rating) 
-                            ? 'text-yellow-400 fill-current' 
-                            : 'text-secondary-300'
-                        }`}
-                      />
-                    ))}
-                    <span className="text-sm text-secondary-600 ml-1">
-                      ({product.reviews})
-                    </span>
-                  </div>
-                  {product.bestseller && (
-                    <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full font-medium">
-                      #{product.salesRank}
-                    </span>
-                  )}
-                </div>
-
-                {/* Key Features */}
-                <div className="mb-4">
-                  <div className="space-y-1">
-                    {product.features.slice(0, 2).map((feature, idx) => (
-                      <div key={idx} className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
-                        <span className="text-sm text-secondary-600">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Category Tags */}
-                {product.category && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {product.category.slice(0, 2).map((cat, catIndex) => {
-                      const categoryInfo = categoriesWithCounts.find(c => c.id === cat);
-                      return (
-                        <span
-                          key={catIndex}
-                          className="text-xs bg-secondary-100 text-secondary-700 px-2 py-1 rounded-lg font-medium"
-                        >
-                          {categoryInfo?.name || cat}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* CTA Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openProductWebsite(product.url);
-                  }}
-                  className="w-full bg-primary-600 text-white py-3 rounded-xl font-medium hover:bg-primary-700 transition-all duration-200 shadow-soft hover:shadow-medium flex items-center justify-center space-x-2"
-                >
-                  <span>View Details</span>
-                  <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </motion.div>
 
       {/* No Results */}
@@ -347,9 +370,9 @@ const Products = () => {
         className="bg-gradient-to-r from-secondary-50 to-secondary-100 rounded-2xl p-6 text-center border border-secondary-200"
       >
         <div className="flex items-center justify-center space-x-2 mb-2">
-          <img 
+          <img
             src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751365731047-Logo.png"
-            alt="Simply Online" 
+            alt="Simply Online"
             className="w-6 h-6 object-contain"
             onError={(e) => {
               e.target.style.display = 'none';

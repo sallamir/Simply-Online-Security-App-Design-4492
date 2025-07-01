@@ -52,28 +52,32 @@ const Home = () => {
       exit={{ opacity: 0 }}
       className="px-4 py-6 space-y-8"
     >
-      {/* Welcome Section */}
+      {/* Welcome Section with Hero Product */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
         className="text-center py-6"
       >
+        {/* Hero Product Image with Floating Animation */}
         <motion.div
-          className="mb-4"
-          animate={{ y: [0, -5, 0] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          className="mb-6"
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          {/* Updated Logo with PNG format */}
-          <img 
-            src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751365731047-Logo.png"
-            alt="Simply Online Australia"
-            className="h-16 w-auto mx-auto mb-4 shadow-strong rounded-lg object-contain"
-            onError={(e) => {
-              e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23f97316' rx='12'/%3E%3Ctext x='32' y='40' text-anchor='middle' fill='white' font-family='Arial' font-size='20' font-weight='bold'%3ESO%3C/text%3E%3C/svg%3E";
-            }}
-          />
+          <div className="relative mx-auto w-48 h-32">
+            <img 
+              src="https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/1751367379821-Camera-4g.jpg"
+              alt="4G Solar Camera PTZ - Best Seller"
+              className="w-full h-full object-contain rounded-2xl shadow-strong"
+            />
+            {/* Best Seller Badge */}
+            <div className="absolute -top-2 -right-2 bg-primary-600 text-white text-xs px-3 py-1 rounded-full font-bold shadow-medium">
+              #1 Best Seller
+            </div>
+          </div>
         </motion.div>
+        
         <h1 className="text-3xl font-bold text-secondary-900 mb-2">Simply Online Australia</h1>
         <p className="text-secondary-600 mb-4">Solar & 4G Security Camera Experts Since 2019</p>
         
