@@ -4,7 +4,7 @@ import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import supabase from '../lib/supabase';
 
-const { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiLogIn, FiUserPlus } = FiIcons;
+const { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiLogIn, FiUserPlus, FiShoppingBag } = FiIcons;
 
 const UserAuth = ({ onAuthSuccess, onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -41,6 +41,12 @@ const UserAuth = ({ onAuthSuccess, onClose }) => {
 
         if (error) throw error;
 
+        // Update last login in our users table
+        await supabase
+          .from('users_so2024')
+          .update({ last_login: new Date().toISOString() })
+          .eq('email', formData.email);
+
         // Store user info
         localStorage.setItem('userEmail', formData.email);
         localStorage.setItem('userId', data.user.id);
@@ -62,16 +68,17 @@ const UserAuth = ({ onAuthSuccess, onClose }) => {
 
         if (error) throw error;
 
-        // Also create user profile
+        // Create user profile in our table
         if (data.user) {
           await supabase
             .from('users_so2024')
-            .insert({
+            .upsert({
               email: formData.email,
               first_name: formData.firstName,
               last_name: formData.lastName,
-              created_at: new Date().toISOString()
-            });
+              created_at: new Date().toISOString(),
+              last_login: new Date().toISOString()
+            }, { onConflict: 'email' });
         }
 
         localStorage.setItem('userEmail', formData.email);
@@ -82,7 +89,17 @@ const UserAuth = ({ onAuthSuccess, onClose }) => {
       }
     } catch (error) {
       console.error('Auth error:', error);
-      setError(error.message);
+      
+      // Handle specific error cases
+      if (error.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials.');
+      } else if (error.message.includes('User already registered')) {
+        setError('This email is already registered. Try logging in instead.');
+      } else if (error.message.includes('Password should be at least 6 characters')) {
+        setError('Password must be at least 6 characters long.');
+      } else {
+        setError(error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -111,9 +128,25 @@ const UserAuth = ({ onAuthSuccess, onClose }) => {
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h2>
           <p className="text-secondary-600">
-            {isLogin ? 'Sign in to track your orders' : 'Join Simply Online Australia'}
+            {isLogin 
+              ? 'Sign in to track your Simply Online orders' 
+              : 'Join Simply Online for order tracking and exclusive offers'
+            }
           </p>
         </div>
+
+        {/* WooCommerce Customer Info */}
+        {isLogin && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="flex items-start space-x-2">
+              <SafeIcon icon={FiShoppingBag} className="w-4 h-4 text-blue-600 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium">Existing Customer?</p>
+                <p>Use the email address from your Simply Online orders to access your purchase history.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -202,6 +235,11 @@ const UserAuth = ({ onAuthSuccess, onClose }) => {
                 <SafeIcon icon={showPassword ? FiEyeOff : FiEye} className="w-5 h-5" />
               </button>
             </div>
+            {!isLogin && (
+              <p className="text-xs text-secondary-500 mt-1">
+                Password must be at least 6 characters long
+              </p>
+            )}
           </div>
 
           {/* Submit Button */}
@@ -222,7 +260,12 @@ const UserAuth = ({ onAuthSuccess, onClose }) => {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');
-                setFormData({ email: '', password: '', firstName: '', lastName: '' });
+                setFormData({
+                  email: '',
+                  password: '',
+                  firstName: '',
+                  lastName: ''
+                });
               }}
               className="text-primary-600 font-medium hover:text-primary-700 ml-1"
             >

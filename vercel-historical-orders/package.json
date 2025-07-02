@@ -1,0 +1,16 @@
+{
+  "name": "simplyonline-historical-orders",
+  "version": "1.0.0",
+  "description": "Historical orders fetcher for Simply Online app",
+  "main": "api/fetch-historical-orders.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

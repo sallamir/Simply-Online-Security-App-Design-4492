@@ -2,26 +2,44 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import UserAuth from '../components/UserAuth';
 import supabase from '../lib/supabase';
+import { useHistoricalOrders } from '../hooks/useHistoricalOrders';
 
-const { FiPackage, FiTruck, FiMapPin, FiCalendar, FiDollarSign, FiUser, FiPhone, FiMail, FiCheck, FiClock, FiAlertCircle } = FiIcons;
+const { FiPackage, FiTruck, FiMapPin, FiCalendar, FiDollarSign, FiUser, FiPhone, FiMail, FiCheck, FiClock, FiAlertCircle, FiLogIn, FiLogOut, FiExternalLink, FiNavigation, FiDownload, FiRefreshCw } = FiIcons;
 
 const OrderTracking = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
   const [searchEmail, setSearchEmail] = useState('');
+  const [showAuth, setShowAuth] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showHistoricalButton, setShowHistoricalButton] = useState(false);
+  
+  const { fetchHistoricalOrders, loading: historicalLoading, error: historicalError } = useHistoricalOrders();
 
   useEffect(() => {
-    // Check if user is logged in (you'll implement this based on your auth system)
-    const email = localStorage.getItem('userEmail') || '';
-    setUserEmail(email);
-    if (email) {
-      fetchUserOrders(email);
-    } else {
-      setLoading(false);
-    }
+    checkAuthStatus();
   }, []);
+
+  const checkAuthStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      setCurrentUser(user);
+      setUserEmail(user.email);
+      fetchUserOrders(user.email);
+    } else {
+      const email = localStorage.getItem('userEmail') || '';
+      setUserEmail(email);
+      if (email) {
+        fetchUserOrders(email);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
 
   const fetchUserOrders = async (email) => {
     setLoading(true);
@@ -36,7 +54,17 @@ const OrderTracking = () => {
         .order('order_date', { ascending: false });
 
       if (error) throw error;
+      
       setOrders(data || []);
+      
+      // Check if we should show the historical orders button
+      // Show if user has some orders but they're all recent (no historical flag)
+      const hasHistoricalOrders = data?.some(order => order.is_historical);
+      const hasRecentOrders = data?.some(order => !order.is_historical);
+      
+      // Show button if user has recent orders but no historical ones
+      setShowHistoricalButton(hasRecentOrders && !hasHistoricalOrders);
+      
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -44,11 +72,55 @@ const OrderTracking = () => {
     }
   };
 
+  const handleHistoricalOrdersFetch = async () => {
+    try {
+      const result = await fetchHistoricalOrders(userEmail);
+      
+      if (result.success) {
+        // Refresh the orders list
+        await fetchUserOrders(userEmail);
+        
+        // Hide the button since we now have historical data
+        setShowHistoricalButton(false);
+        
+        if (result.cached) {
+          alert('Historical orders already loaded!');
+        } else if (result.count === 0) {
+          alert('No additional historical orders found.');
+        } else {
+          alert(`Successfully loaded ${result.count} historical orders!`);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching historical orders:', error);
+      alert(`Failed to load historical orders: ${error.message}`);
+    }
+  };
+
   const handleEmailSearch = (e) => {
     e.preventDefault();
     if (searchEmail) {
+      setUserEmail(searchEmail);
+      localStorage.setItem('userEmail', searchEmail);
       fetchUserOrders(searchEmail);
     }
+  };
+
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setUserEmail(user.email);
+    fetchUserOrders(user.email);
+    setShowAuth(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setUserEmail('');
+    setOrders([]);
+    setShowHistoricalButton(false);
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userId');
   };
 
   const getStatusColor = (status) => {
@@ -69,6 +141,32 @@ const OrderTracking = () => {
       case 'shipped': return FiTruck;
       case 'pending': return FiAlertCircle;
       default: return FiPackage;
+    }
+  };
+
+  // Enhanced carrier icon function
+  const getCarrierIcon = (carrier) => {
+    if (!carrier) return FiTruck;
+    
+    const carrierLower = carrier.toLowerCase();
+    if (carrierLower.includes('australia') || carrierLower.includes('auspost')) {
+      return FiPackage; // Australia Post
+    } else if (carrierLower.includes('star')) {
+      return FiTruck; // StarTrack
+    } else if (carrierLower.includes('dhl') || carrierLower.includes('fedex')) {
+      return FiNavigation; // International carriers
+    }
+    return FiTruck;
+  };
+
+  // Enhanced tracking URL opening
+  const openTrackingUrl = (trackingUrl, carrier, trackingNumber) => {
+    if (trackingUrl) {
+      window.open(trackingUrl, '_blank', 'noopener,noreferrer');
+    } else if (carrier && trackingNumber) {
+      // Fallback: generate URL if not stored
+      const searchUrl = `https://www.google.com/search?q=track+${encodeURIComponent(carrier)}+${encodeURIComponent(trackingNumber)}`;
+      window.open(searchUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -106,9 +204,24 @@ const OrderTracking = () => {
         <p className="text-primary-100">
           Track your Simply Online Australia orders
         </p>
+        
+        {currentUser && (
+          <div className="mt-4 flex items-center justify-center space-x-4">
+            <span className="text-sm text-primary-100">
+              Welcome back, {currentUser.email}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="text-xs bg-primary-500 hover:bg-primary-400 px-3 py-1 rounded-full transition-colors"
+            >
+              <SafeIcon icon={FiLogOut} className="w-3 h-3 inline mr-1" />
+              Logout
+            </button>
+          </div>
+        )}
       </motion.div>
 
-      {/* Email Search (if not logged in) */}
+      {/* Authentication Options */}
       {!userEmail && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -116,28 +229,81 @@ const OrderTracking = () => {
           transition={{ delay: 0.2 }}
           className="bg-white rounded-xl p-6 shadow-soft border border-secondary-200"
         >
-          <h3 className="text-lg font-semibold text-secondary-900 mb-4">Find Your Orders</h3>
-          <form onSubmit={handleEmailSearch} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                placeholder="Enter the email used for your order"
-                className="w-full px-3 py-3 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
+          <h3 className="text-lg font-semibold text-secondary-900 mb-4">Access Your Orders</h3>
+          
+          <div className="space-y-4">
             <button
-              type="submit"
-              className="w-full bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              onClick={() => setShowAuth(true)}
+              className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
             >
-              Find My Orders
+              <SafeIcon icon={FiLogIn} className="w-4 h-4" />
+              <span>Sign In / Create Account</span>
             </button>
-          </form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-secondary-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-secondary-500">or</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleEmailSearch} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
+                  Quick Order Lookup (Guest)
+                </label>
+                <input
+                  type="email"
+                  value={searchEmail}
+                  onChange={(e) => setSearchEmail(e.target.value)}
+                  placeholder="Enter your order email address"
+                  className="w-full px-3 py-3 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-secondary-600 text-white py-3 rounded-lg font-medium hover:bg-secondary-700 transition-colors"
+              >
+                Find My Orders
+              </button>
+            </form>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Historical Orders Button */}
+      {showHistoricalButton && userEmail && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200"
+        >
+          <div className="flex items-center space-x-3 mb-3">
+            <SafeIcon icon={FiDownload} className="w-5 h-5 text-blue-600" />
+            <h3 className="font-semibold text-blue-900">Load Your Older Orders</h3>
+          </div>
+          <p className="text-sm text-blue-700 mb-4">
+            We found recent orders for your account. Would you like to see your complete order history from our website?
+          </p>
+          <button
+            onClick={handleHistoricalOrdersFetch}
+            disabled={historicalLoading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          >
+            <SafeIcon 
+              icon={historicalLoading ? FiRefreshCw : FiDownload} 
+              className={`w-4 h-4 ${historicalLoading ? 'animate-spin' : ''}`} 
+            />
+            <span>{historicalLoading ? 'Loading...' : 'Show My Older Orders'}</span>
+          </button>
+          {historicalError && (
+            <p className="text-sm text-red-600 mt-2">
+              Error: {historicalError}
+            </p>
+          )}
         </motion.div>
       )}
 
@@ -149,10 +315,20 @@ const OrderTracking = () => {
           transition={{ delay: 0.3 }}
           className="space-y-4"
         >
-          <h3 className="text-lg font-semibold text-secondary-900">
-            Your Orders ({orders.length})
-          </h3>
-          
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-secondary-900">
+              Your Orders ({orders.length})
+            </h3>
+            {userEmail && !currentUser && (
+              <button
+                onClick={() => setShowAuth(true)}
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              >
+                Create Account
+              </button>
+            )}
+          </div>
+
           {orders.map((order, index) => (
             <motion.div
               key={order.id}
@@ -164,9 +340,16 @@ const OrderTracking = () => {
               {/* Order Header */}
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="text-lg font-semibold text-secondary-900">
-                    Order #{order.order_number}
-                  </h4>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="text-lg font-semibold text-secondary-900">
+                      Order #{order.order_number}
+                    </h4>
+                    {order.is_historical && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        Historical
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center space-x-4 text-sm text-secondary-600 mt-1">
                     <div className="flex items-center space-x-1">
                       <SafeIcon icon={FiCalendar} className="w-4 h-4" />
@@ -178,7 +361,6 @@ const OrderTracking = () => {
                     </div>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={getStatusIcon(order.status)} className="w-4 h-4" />
                   <span className={`text-sm px-3 py-1 rounded-full font-medium ${getStatusColor(order.status)}`}>
@@ -187,18 +369,48 @@ const OrderTracking = () => {
                 </div>
               </div>
 
-              {/* Tracking Number */}
-              {order.tracking_number && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center space-x-2">
-                    <SafeIcon icon={FiTruck} className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">
-                      Tracking Number: {order.tracking_number}
-                    </span>
+              {/* Enhanced Tracking Section */}
+              {(order.tracking_number || order.carrier_provider) && (
+                <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <SafeIcon icon={getCarrierIcon(order.carrier_provider)} className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm font-bold text-blue-900">
+                          Package Tracking
+                        </span>
+                      </div>
+                      
+                      {order.carrier_provider && (
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-xs text-blue-700 font-medium">Carrier:</span>
+                          <span className="text-sm text-blue-800 font-semibold">{order.carrier_provider}</span>
+                        </div>
+                      )}
+                      
+                      {order.tracking_number && (
+                        <div className="flex items-center space-x-2 mb-3">
+                          <span className="text-xs text-blue-700 font-medium">Tracking ID:</span>
+                          <span className="text-sm text-blue-800 font-mono bg-white px-2 py-1 rounded border">
+                            {order.tracking_number}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-blue-600">
+                        Click "Track Package" to see real-time delivery updates
+                      </p>
+                    </div>
+                    
+                    {/* Track Package Button */}
+                    <button
+                      onClick={() => openTrackingUrl(order.tracking_url, order.carrier_provider, order.tracking_number)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2 shadow-medium"
+                    >
+                      <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
+                      <span>Track Package</span>
+                    </button>
                   </div>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Track your package with Australia Post or your carrier
-                  </p>
                 </div>
               )}
 
@@ -257,7 +469,6 @@ const OrderTracking = () => {
           ))}
         </motion.div>
       ) : (
-        // No orders found
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -268,17 +479,28 @@ const OrderTracking = () => {
           <h3 className="text-xl font-semibold text-secondary-900 mb-2">No Orders Found</h3>
           <p className="text-secondary-600 mb-6">
             {userEmail || searchEmail 
-              ? "We couldn't find any orders for this email address."
-              : "Enter your email address to view your order history."}
+              ? "We couldn't find any orders for this email address." 
+              : "Sign in or enter your email address to view your order history."
+            }
           </p>
-          <a
-            href="https://simplyonline.com.au/products/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-primary-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-700 transition-colors"
-          >
-            Shop Now
-          </a>
+          <div className="space-y-3">
+            <a
+              href="https://simplyonline.com.au/products/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-primary-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-700 transition-colors"
+            >
+              Shop Now
+            </a>
+            {!currentUser && (
+              <button
+                onClick={() => setShowAuth(true)}
+                className="block w-full max-w-xs mx-auto text-primary-600 font-medium hover:text-primary-700 transition-colors"
+              >
+                Create Account for Better Experience
+              </button>
+            )}
+          </div>
         </motion.div>
       )}
 
@@ -311,6 +533,14 @@ const OrderTracking = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Authentication Modal */}
+      {showAuth && (
+        <UserAuth
+          onAuthSuccess={handleAuthSuccess}
+          onClose={() => setShowAuth(false)}
+        />
+      )}
     </motion.div>
   );
 };

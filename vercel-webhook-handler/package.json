@@ -1,0 +1,16 @@
+{
+  "name": "simplyonline-webhook-handler",
+  "version": "1.0.0",
+  "description": "Webhook handler for Simply Online WooCommerce integration",
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
