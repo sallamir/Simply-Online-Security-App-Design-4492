@@ -1,4 +1,4 @@
-// Vercel Function: Secure Historical Orders Fetcher
+// CORRECTED: Fixed WooCommerce API usage and table references
 const crypto = require('crypto');
 
 // WooCommerce API Configuration (Server-side only)
@@ -33,15 +33,14 @@ const checkRateLimit = (email) => {
   if (recentRequests.length >= maxRequests) {
     return false; // Rate limit exceeded
   }
-
+  
   // Add current request
   recentRequests.push(now);
   rateLimitStore.set(email, recentRequests);
-  
   return true; // Request allowed
 };
 
-// Fetch orders from WooCommerce API with pagination
+// CORRECTED: Fetch orders using standard fetch, not WooCommerceRestApi constructor
 const fetchWooCommerceOrders = async (email, beforeDate = null) => {
   try {
     const auth = Buffer.from(`${WOOCOMMERCE_CONFIG.consumerKey}:${WOOCOMMERCE_CONFIG.consumerSecret}`).toString('base64');
@@ -73,7 +72,6 @@ const fetchWooCommerceOrders = async (email, beforeDate = null) => {
 
     const orders = await response.json();
     console.log(`📦 Fetched ${orders.length} historical orders for ${email}`);
-    
     return orders;
   } catch (error) {
     console.error('Error fetching WooCommerce orders:', error);
@@ -88,9 +86,9 @@ const convertOrderFormat = (wooOrder) => {
     customer_email: wooOrder.billing.email,
     order_number: wooOrder.number,
     status: wooOrder.status,
-    total_amount: parseFloat(wooOrder.total),
+    total: parseFloat(wooOrder.total), // CORRECTED: use 'total' not 'total_amount'
     currency: wooOrder.currency,
-    order_date: wooOrder.date_created,
+    date_created: wooOrder.date_created, // CORRECTED: use 'date_created' not 'order_date'
     shipping_address: {
       first_name: wooOrder.shipping?.first_name || wooOrder.billing.first_name,
       last_name: wooOrder.shipping?.last_name || wooOrder.billing.last_name,
@@ -118,19 +116,19 @@ const convertOrderFormat = (wooOrder) => {
   };
 };
 
-// Save historical orders to Supabase
+// CORRECTED: Save historical orders to Supabase with proper table references
 const saveHistoricalOrders = async (orders) => {
   if (!orders || orders.length === 0) return [];
 
   try {
     const formattedOrders = orders.map(convertOrderFormat);
-    
+
     // Upsert orders (insert or update if exists)
     const { data: savedOrders, error: orderError } = await supabase
       .from('orders_so2024')
-      .upsert(formattedOrders, { 
+      .upsert(formattedOrders, {
         onConflict: 'woocommerce_order_id',
-        ignoreDuplicates: false 
+        ignoreDuplicates: false
       })
       .select();
 
@@ -203,7 +201,7 @@ module.exports = async (req, res) => {
 
     // Check rate limiting
     if (!checkRateLimit(email)) {
-      return res.status(429).json({ 
+      return res.status(429).json({
         error: 'Rate limit exceeded. Please try again in 15 minutes.',
         retryAfter: 15 * 60 // seconds
       });
@@ -234,7 +232,7 @@ module.exports = async (req, res) => {
 
     // Fetch historical orders from WooCommerce
     const historicalOrders = await fetchWooCommerceOrders(
-      email, 
+      email,
       webhookStartDate || '2024-01-01T00:00:00Z' // Default cutoff date
     );
 
@@ -257,15 +255,14 @@ module.exports = async (req, res) => {
       count: savedOrders.length,
       orders: savedOrders.map(order => ({
         order_number: order.order_number,
-        order_date: order.order_date,
-        total_amount: order.total_amount,
+        date_created: order.date_created, // CORRECTED
+        total: order.total, // CORRECTED
         status: order.status
       }))
     });
 
   } catch (error) {
     console.error('❌ Historical orders fetch error:', error);
-    
     return res.status(500).json({
       error: 'Failed to fetch historical orders',
       message: error.message,

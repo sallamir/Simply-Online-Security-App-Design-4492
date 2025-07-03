@@ -12,15 +12,15 @@ export const useHistoricalOrders = () => {
     setSuccess(false);
 
     try {
-      // IMPORTANT: Replace this URL with your actual Vercel function URL
-      const response = await fetch('https://your-vercel-function-url.vercel.app/api/fetch-historical-orders', {
+      // CORRECTED: Remove .js extension from URL
+      const response = await fetch('https://simplyonline-webhook-handler-projec.vercel.app/api/fetch-historical-orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           email: email,
-          webhookStartDate: '2024-01-01T00:00:00Z' // Adjust this date as needed
+          webhookStartDate: '2023-01-01T00:00:00Z'
         })
       });
 

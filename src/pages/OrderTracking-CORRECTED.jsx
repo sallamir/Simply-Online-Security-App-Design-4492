@@ -7,11 +7,7 @@ import supabase from '../lib/supabase';
 import { useSupabaseOrders } from '../hooks/useSupabaseOrders';
 import { useHistoricalOrders } from '../hooks/useHistoricalOrders';
 
-const {
-  FiPackage, FiTruck, FiMapPin, FiCalendar, FiDollarSign, FiUser, FiPhone, FiMail,
-  FiCheck, FiClock, FiAlertCircle, FiLogIn, FiLogOut, FiExternalLink, FiNavigation,
-  FiDownload, FiRefreshCw
-} = FiIcons;
+const { FiPackage, FiTruck, FiMapPin, FiCalendar, FiDollarSign, FiUser, FiPhone, FiMail, FiCheck, FiClock, FiAlertCircle, FiLogIn, FiLogOut, FiExternalLink, FiNavigation, FiDownload, FiRefreshCw } = FiIcons;
 
 const OrderTracking = () => {
   const [orders, setOrders] = useState([]);
@@ -44,13 +40,15 @@ const OrderTracking = () => {
     }
   };
 
-  // CORRECTED: Use the proper two-step lookup
+  // CORRECTED: Simplified single lookup function
   const fetchUserOrdersAndSetState = async (email) => {
     if (!email) return;
 
     console.log('🔍 Fetching orders for:', email);
+
     try {
       const result = await fetchUserOrders(email);
+      
       console.log('📊 Order fetch result:', {
         userFound: !!result.user,
         orderCount: result.orders.length
@@ -68,12 +66,13 @@ const OrderTracking = () => {
           hasRecentOrders,
           shouldShowButton: hasRecentOrders && !hasHistoricalOrders
         });
-
+        
         // Show button if user has recent orders but no historical ones
         setShowHistoricalButton(hasRecentOrders && !hasHistoricalOrders);
       } else {
         setShowHistoricalButton(false);
       }
+
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
@@ -86,6 +85,7 @@ const OrderTracking = () => {
 
     try {
       console.log('🔄 Fetching historical orders for:', userEmail);
+      
       const response = await fetch('https://simplyonline-webhook-handler-projec.vercel.app/api/fetch-historical-orders', {
         method: 'POST',
         headers: {
@@ -98,17 +98,20 @@ const OrderTracking = () => {
       });
 
       const result = await response.json();
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch historical orders');
       }
 
       console.log('✅ Historical fetch result:', result);
+
       if (result.success) {
         // Refresh the orders list
         await fetchUserOrdersAndSetState(userEmail);
+        
         // Hide the button since we now have historical data
         setShowHistoricalButton(false);
-
+        
         if (result.cached) {
           alert('Historical orders already loaded!');
         } else if (result.count === 0) {
@@ -313,7 +316,10 @@ const OrderTracking = () => {
             disabled={historicalLoading}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
-            <SafeIcon icon={historicalLoading ? FiRefreshCw : FiDownload} className={`w-4 h-4 ${historicalLoading ? 'animate-spin' : ''}`} />
+            <SafeIcon 
+              icon={historicalLoading ? FiRefreshCw : FiDownload} 
+              className={`w-4 h-4 ${historicalLoading ? 'animate-spin' : ''}`} 
+            />
             <span>{historicalLoading ? 'Loading Orders...' : 'Show My Complete History'}</span>
           </button>
           {historicalError && (
@@ -327,12 +333,12 @@ const OrderTracking = () => {
       {/* Debug Information */}
       {userEmail && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
-          <strong>Debug Info:</strong><br />
-          Email: {userEmail}<br />
-          Orders found: {orders.length}<br />
-          Show historical button: {showHistoricalButton ? 'Yes' : 'No'}<br />
-          Has historical orders: {orders.some(o => o.is_historical) ? 'Yes' : 'No'}<br />
-          Has recent orders: {orders.some(o => !o.is_historical) ? 'Yes' : 'No'}
+          <strong>Debug Info:</strong>
+          <br />Email: {userEmail}
+          <br />Orders found: {orders.length}
+          <br />Show historical button: {showHistoricalButton ? 'Yes' : 'No'}
+          <br />Has historical orders: {orders.some(o => o.is_historical) ? 'Yes' : 'No'}
+          <br />Has recent orders: {orders.some(o => !o.is_historical) ? 'Yes' : 'No'}
           {error && <><br />Error: {error}</>}
         </div>
       )}

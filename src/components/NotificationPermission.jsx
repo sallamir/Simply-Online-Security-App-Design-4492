@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
-import pushNotificationManager from '../lib/pushNotifications';
 
 const { FiBell, FiX, FiCheckCircle, FiAlertCircle } = FiIcons;
 
@@ -32,18 +31,19 @@ const NotificationPermission = () => {
     setIsLoading(true);
     
     try {
-      const token = await pushNotificationManager.requestPermissionAndGetToken();
-      
-      if (token) {
-        setPermissionStatus('granted');
-        setShowPrompt(false);
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        setPermissionStatus(permission);
         
-        // Show success message
-        setTimeout(() => {
-          alert('🔔 Notifications enabled! You\'ll receive updates about new products, tutorials, and promotions.');
-        }, 500);
-      } else {
-        setPermissionStatus('denied');
+        if (permission === 'granted') {
+          setShowPrompt(false);
+          // Show success message
+          setTimeout(() => {
+            alert('🔔 Notifications enabled! You\'ll receive updates about new products, tutorials, and promotions.');
+          }, 500);
+        } else {
+          setPermissionStatus('denied');
+        }
       }
     } catch (error) {
       console.error('Error requesting permission:', error);
@@ -85,7 +85,6 @@ const NotificationPermission = () => {
               <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <SafeIcon icon={FiBell} className="w-5 h-5 text-primary-600" />
               </div>
-              
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-secondary-900 mb-1">
                   Stay Updated with Simply Online
@@ -93,7 +92,6 @@ const NotificationPermission = () => {
                 <p className="text-sm text-secondary-600 mb-3">
                   Get notified about new tutorials, product launches, and exclusive promotions for security cameras.
                 </p>
-                
                 <div className="flex space-x-2">
                   <button
                     onClick={requestPermission}

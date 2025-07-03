@@ -17,12 +17,23 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['framer-motion', 'react-icons']
+          ui: ['framer-motion', 'react-icons'],
+          supabase: ['@supabase/supabase-js']
         }
       }
     }
   },
   optimizeDeps: {
-    include: ['firebase/app', 'firebase/messaging']
+    include: [
+      'react',
+      'react-dom', 
+      'react-router-dom',
+      'framer-motion',
+      'react-icons',
+      '@supabase/supabase-js'
+    ]
+  },
+  define: {
+    global: 'globalThis'
   }
 });
